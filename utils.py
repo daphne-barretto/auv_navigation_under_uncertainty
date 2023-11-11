@@ -148,6 +148,68 @@ def generate_transition_matrix(T,transition_offsets,action_offsets,T_stat_mean,T
 
     return T
 
+#Function to simulate a group of trajectories and provide output information on how they did
+#Output is a dictionary with all the i,j locations at each time step in the simulation
+def simulate_traj_set(T,transition_offsets,P,n_sims,sim_max,end_location,start_location):
+    #Inputs:
+    # T - Transition matrix of size nx x ny x num_actions x n x n
+    # transition_offsets - offsets for the different components in the transition matrix T - 1D vector, assumes same for i and j
+    # P - Policy action at each point
+    # n_sims - number of simulated trajectories to compute
+    # sim_max - maximum steps in a sim before we give up and say it wasn't going to reach the end
+    # end_location - end_location in i,j
+    # start_location - starting location in i,j
+
+    #Outputs:
+    # n_values - number of steps for each trajectory
+    # traj - dictionary 0-n_sims-1 of the trajectory (i,j) ordered points
+    
+    #Dictionary for the trajectory information
+    trajs={}
+    n_values=np.zeros(n_sims)
+    #I/J offsets for the transition matrices
+    (n_x,n_y,n_a,n1,n2)=T.shape
+    i_offset=np.tile(np.expand_dims(transition_offsets,-1),(1,n2))
+    j_offset=np.tile(np.expand_dims(transition_offsets,0),(n1,1))
+    i_offset=np.reshape(i_offset,n1*n2)
+    j_offset=np.reshape(j_offset,n1*n2)
+    
+    #Type checking
+    P=P.astype('int32')
+    #Loop for all the individual simulations
+    for ind in range(n_sims): 
+        print('Running Trajectory '+ str(ind))
+        #Empty trajectory for now
+        traj=np.zeros((sim_max,2))
+        #Set the starting location
+        traj[0,:]=start_location
+        #Start stepping through the policy
+        for sim_step in range(1,sim_max):
+            #Extract our transition matrix for that state and action
+            ind1=int(traj[sim_step-1,0])
+            ind2=int(traj[sim_step-1,1])
+            T_step=T[ind1,ind2,P[ind1,ind2],:,:]
+            T_step=np.reshape(T_step,n1*n2)
+            #Cumulative sum of probalities - used to determine which we are in
+            csum=np.cumsum(T_step)
+            #Draw random number to determine which transition happened
+            r_samp=np.random.uniform()
+            #State we ended up in
+            state_index=np.where(csum>=r_samp)
+            #New i,j
+            new_i=traj[sim_step-1,0]+i_offset[state_index[0][0]]
+            new_j=traj[sim_step-1,1]+j_offset[state_index[0][0]]
+            #Store the state we ended up in
+            traj[sim_step,0]=new_i
+            traj[sim_step,1]=new_j
+            #See if we are at the end state
+            if new_i==end_location[0] and new_j==end_location[1]:
+                break
+        #Store the trajectory and the number of iterations
+        n_values[ind]=sim_step
+        trajs[ind]=traj[0:sim_step+1,:]
+    
+    return n_values,trajs
 
 ###########################################################################################################
 ##### Old Functions from the old projects

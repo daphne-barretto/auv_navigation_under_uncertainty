@@ -6,7 +6,7 @@ import time
 import matplotlib.pyplot as plt  
 import numpy as np
 import pickle
-from utils import generate_floor_mask,generate_transition_matrix
+from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set
 from value_iteration_gs import value_iteration
 
 
@@ -146,7 +146,7 @@ def main():
     log_file=os.getcwd() + '/' + log_file_name
     if not os.path.exists(log_file):
         file=open(log_file,'w')
-        file.write('Filename, Run Time (s)\n')
+        file.write('Filename, Run Time (s), Mean Steps\n')
         file.close()
 
     #Group 2: Generation of a Policy
@@ -154,10 +154,7 @@ def main():
         if rerun_Value:
             #Value iteration Code
             V,P,run_time=value_iteration(R,T,terminal_mask,transition_offsets,floor_mask,end_location,gamma,iter_max,delta_V_end,V_walls)
-            #Update log
-            file=open(log_file,'a')
-            file.write(run_name + ',' + str(run_time) + '\n')
-            file.close()
+
             #Write the outputs
             with open(value_save_file, "wb") as fp:
                 pickle.dump((V,P,run_time), fp)
@@ -185,6 +182,36 @@ def main():
         plt.title('Value Function from Value Function Iteration')
         plt.savefig(value_function_figure)
         #plt.show()
+
+    #Group 3: Trajectory simulations and metrics
+    n_steps,trajs=simulate_traj_set(T,transition_offsets,P,n_sims,sim_max,end_location,start_location)
+    mean_steps=np.mean(n_steps)
+    print('Mean Number of Steps to Goal: '+ str(mean_steps))
+
+    # Plot of the domain results - currently set up to have a value function as the background
+    plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
+    cbar=plt.colorbar()
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    cbar.set_label('V')
+    x_end=end_location[0]/(n_x-1)*X_max
+    y_end=end_location[1]/(n_y-1)*Y_max
+    plt.scatter(x_end,y_end,s=10,color='red')
+    plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
+    x_start=start_location[0]/(n_x-1)*X_max
+    y_start=start_location[1]/(n_y-1)*Y_max
+    plt.scatter(x_start,y_start,s=10,color='white')
+    plt.text(x_start,y_start-0.1,'Start',fontsize=8,color='white')
+    temp=trajs[0]
+    plt.plot(temp[:,0]/(n_x-1)*X_max,temp[:,1]/(n_y-1)*Y_max,'k--',linewidth=2)
+    plt.title('Value Function from Value Function Iteration')
+    plt.savefig(value_function_figure)
+
+
+    #Update log
+    file=open(log_file,'a')
+    file.write(run_name + ',' + str(run_time) + ',' + str(mean_steps) + '\n')
+    file.close()
 
 #Main Caller    
 if __name__ == '__main__':
