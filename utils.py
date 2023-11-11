@@ -93,8 +93,6 @@ def generate_transition_matrix(T,transition_offsets,action_offsets,T_stat_mean,T
                         for jj in range(n2):
                             #Compute the multivariant PDF for this point
                             T_temp[ii,jj]=mvn.pdf([transition_offsets[ii],transition_offsets[jj]])
-                    #Normalize the probability results
-                    T_temp=T_temp/np.sum(T_temp)
                     #Loop to reassign probabilities of any points that are outside of the domain to the nearest point in the domain - for the edges, this will always be the one 
                     #that is in the opposite direction we went out of bounds
                     #Entering a wall instead assign that we don't move
@@ -144,6 +142,8 @@ def generate_transition_matrix(T,transition_offsets,action_offsets,T_stat_mean,T
                                     #Reassign this probability to no movement
                                     T_temp[ind_no_move,ind_no_move]+=T_temp[ii,jj]
                                     T_temp[ii,jj]=0
+                    #Normalize the probability results
+                    T_temp=T_temp/np.sum(T_temp)
                     T[i,j,k,:,:]=T_temp
 
     return T

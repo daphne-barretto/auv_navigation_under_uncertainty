@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pickle
 from utils import generate_floor_mask,generate_transition_matrix
+from value_iteration_gs import value_iteration
 
 
 #Main Function
@@ -20,6 +21,7 @@ def main():
     #Domain Description:
     #State Space for the Robot (x,y) coordinates for the location of the robot currently - (0,0) is the bottom left corner of the domain picture - corresponds to i=0,j=0 for coordinates
     # (n_x-1,n_y-1) corresponds to (X_max, Y_max) in any calculations
+    #Note: there is an implicit assumption in alot of these distance calculations that we have square grid cells, i.e. dx=dy
     n_x=300 #Number of grid points in X
     n_y=100 #Number of grid points in Y
     X_max=3 #Length of the X grid in dimensionless distance
@@ -61,7 +63,7 @@ def main():
     #Also this approach avoids having to try to calculate the 2D CDF to figure out the exat probability we are in a box.
     #Any transition that would go outside of the (i,j) domain taking that action will assign its probability to the nearest cell in the domain. Any transition that would take us into a wall we instead assign it to staying put
     transition_offsets=np.array([-3,-2,-1,0,1,2,3])
-    T=np.zeros((n_x,n_y,action_max,7,7))
+    T=np.zeros((n_x,n_y,action_max+1,7,7))
 
     #Multivariate normal offset parameters - magnitude scales linearly at each i location from 0 at the floor location in y up the maximums that are here at the surface
     #Ignoring the fact that the constant of at the surface violates the conservation of mass for now
@@ -73,11 +75,14 @@ def main():
     P=np.zeros((n_x,n_y))
 
     #Rerun or used saved generation of the domain
-    regenerate_flag=True
+    regenerate_flag=False
     domain_output_file='Saved_Data/geometry.pkl'
 
     #########################################################
     #Group 2: Policy Evaluation Inputs
+
+    #Discount factor for policy iterations and simulations
+    gamma=0.99
 
     #Evaluation Routine
     # 1 - Value Iteration with Gauss Seidel based on distance to goal
@@ -85,6 +90,11 @@ def main():
 
     ########################
     # Choice 1 Input Parameters
+    iter_max=200
+    delta_V_end=0.1
+    V_walls=-100 #Value for in the walls, but as negative so it will easily stand out in the plot / will tell us quickly if I messed up the transition matrices
+    rerun_Value=False
+    value_save_file='Saved_Data/Value_Iteration_gs.pkl'
 
     ##########################################################
     #Group 3: Metric Evaluation + Visualizations
@@ -94,7 +104,8 @@ def main():
     run_name='test'
     #Number of simulation attempts for our policy and the default policies
     n_sims=100
-    #Maximum simulation number of steps to try to get to goal - something goes very wrong if we hit this
+    #Maximum simulation number of steps to try to get to goal - something goes very wrong if we hit this / can't get to goal
+    #Simulation usually ends when we hit the endpoint
     sim_max=1000
 
     #############################################################################################################################################################################
@@ -129,13 +140,41 @@ def main():
         floor_mask=temp[2]
         terminal_mask=temp[3]
         end_location=temp[4]
-        breakpoint()
 
-    # #Plot of the domain results
-    # plt.imshow(floor_mask.T, origin="lower",extent=[0,X_max,0,Y_max])
-    # plt.colorbar()
-    # plt.show()
-    print('Building')
+    #Check on my log file
+    log_file=os.getcwd() + '/' + log_file_name
+    if not os.path.exists(log_file):
+        file=open(log_file,'w')
+        file.write('Filename, Run Time (s)\n')
+        file.close()
+
+    #Group 2: Generation of a Policy
+    if policy_eval_choice==1:
+        if rerun_Value:
+            #Value iteration Code
+            V,P,run_time=value_iteration(R,T,terminal_mask,transition_offsets,floor_mask,end_location,gamma,iter_max,delta_V_end,V_walls)
+            #Update log
+            file=open(log_file,'a')
+            file.write(run_name + ',' + str(run_time) + '\n')
+            file.close()
+            #Write the outputs
+            with open(value_save_file, "wb") as fp:
+                pickle.dump((V,P,run_time), fp)
+        else:
+            with open(value_save_file, "rb") as fp:
+                temp = pickle.load(fp)
+                V=temp[0]
+                P=temp[1]
+                run_time=temp[2]
+
+        # Plot of the domain results
+        plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
+        plt.colorbar()
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.show()
+
+        breakpoint()
 
 
 #Main Caller    

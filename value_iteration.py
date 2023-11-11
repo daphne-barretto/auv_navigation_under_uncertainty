@@ -58,7 +58,6 @@ def value_iteration(problem, reward, terminal_mask, gam):
 
 
         sum_values=tf.convert_to_tensor(sum_values, dtype=tf.float32)
-        #breakpoint()
         command_reward=reward+gam*sum_values
         nonterminal_update=(1-terminal_mask)*tf.reduce_max(command_reward,axis=1)
 
