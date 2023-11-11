@@ -67,7 +67,7 @@ def main():
 
     #Multivariate normal offset parameters - magnitude scales linearly at each i location from 0 at the floor location in y up the maximums that are here at the surface
     #Ignoring the fact that the constant of at the surface violates the conservation of mass for now
-    T_stat_mean=np.array([0,0]) #Mean offset at the surface [2,0] will be +2 offset in the x-direction
+    T_stat_mean=np.array([2,0]) #Mean offset at the surface [2,0] will be +2 offset in the x-direction
     T_stat_covariance=np.array([[1,0],[0,1]]) #Mean standard deviation for the covariance strength for nudging in various directions
 
     #Policy storage matrix P[i,j]=a means take action a at location P[i,j] according to the policy
@@ -95,6 +95,7 @@ def main():
     V_walls=-100 #Value for in the walls, but as negative so it will easily stand out in the plot / will tell us quickly if I messed up the transition matrices
     rerun_Value=False
     value_save_file='Saved_Data/Value_Iteration_gs.pkl'
+    value_function_figure='Figures/Value_Iteration.png'
 
     ##########################################################
     #Group 3: Metric Evaluation + Visualizations
@@ -169,13 +170,21 @@ def main():
 
         # Plot of the domain results
         plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
-        plt.colorbar()
+        cbar=plt.colorbar()
         plt.xlabel('X')
         plt.ylabel('Y')
-        plt.show()
-
-        breakpoint()
-
+        cbar.set_label('V')
+        x_end=end_location[0]/(n_x-1)*X_max
+        y_end=end_location[1]/(n_y-1)*Y_max
+        plt.scatter(x_end,y_end,s=10,color='red')
+        plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
+        x_start=start_location[0]/(n_x-1)*X_max
+        y_start=start_location[1]/(n_y-1)*Y_max
+        plt.scatter(x_start,y_start,s=10,color='white')
+        plt.text(x_start,y_start-0.1,'Start',fontsize=8,color='white')
+        plt.title('Value Function from Value Function Iteration')
+        plt.savefig(value_function_figure)
+        #plt.show()
 
 #Main Caller    
 if __name__ == '__main__':
