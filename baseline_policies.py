@@ -128,21 +128,34 @@ def baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max):
     # 2 - go in the +y direction 1 unit j
     # 3 - go in the -y direction 1 unit j
 
-    #Extract the shape nx x ny
+      #Extract the shape nx x ny
     (nx,ny)=floor_mask.shape
 
     #This policy will always go down until it hits the floor - along the floor it will follow the floor towards the goal
     P=np.ones((nx,ny),dtype='int32')*3
 
     #Loop over all the points to choose the action that best moves us closest to the goal
+    x_goal=end_location[0]*X_max/(nx-1)
+    y_goal=end_location[1]*Y_max/(ny-1)
     for i in range(nx):
         for j in range(ny):
             #Skip if this point is in the floor
             if floor_mask[i,j]==1:
                 continue
             else:
-                #Loop over all the actions
-                breakpoint()
+                #Loop over all the actions to see which resulting point gets us the closest to the goal
+                goal_distance=np.zeros(action_offsets.shape[0])
+                for k in range(action_offsets.shape[0]):
+                    #New point location
+                    i_new=i+action_offsets[k,0]
+                    j_new=j+action_offsets[k,1]
+                    #X,Y for new point
+                    x_new=i_new*X_max/(nx-1)
+                    y_new=j_new*Y_max/(ny-1)
+                    #Compute distance to the goal
+                    goal_distance[k]=np.sqrt((x_new-x_goal)**2+(y_new-y_goal)**2)
+                #Minimum argument is our policy choice
+                P[i,j]=np.argmin(goal_distance)
 
 
     #Loop to find us going along the floor - if there is a mask point to the side and below to the side then we would go up. if there is a mask point below and to the side, but not to the side go towards the goal

@@ -6,9 +6,9 @@ import time
 import matplotlib.pyplot as plt  
 import numpy as np
 import pickle
-from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj
+from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj, generate_T_samples
 from value_iteration_gs import value_iteration
-from baseline_policies import baseline_down, baseline_across
+from baseline_policies import baseline_down, baseline_across, baseline_straight
 
 
 #Main Function
@@ -79,6 +79,22 @@ def main():
     regenerate_flag=False
     domain_output_file='Saved_Data/geometry.pkl'
 
+    #Statistical Points - generation of a group of samples similar to the inputs we had for Project 2 - this could be used with those algorithms as a kind of .csv file 
+    #Putting this in in case we want to use it for any algorithms - not currently used, just stored
+    # Stored in Matrix_T_Samples
+    # column 0 - i for starting state
+    # column 1 - j for starting state
+    # column 2 - action a
+    # column 3 - Reward for starting state i,j
+    # column 4 - i for ending state
+    # column 5 - j for ending state
+    #Points in the wall are not included
+    #n_samples taken at each point i,j
+    generate_samples_flag=False
+    n_samples=100
+    T_samples_output_file='Saved_Data/T_samples.pkl'
+
+
     #########################################################
     #Group 2: Policy Evaluation Inputs
 
@@ -103,7 +119,7 @@ def main():
     #Log File Name
     log_file_name='local_log.csv'
     #Run Name for this run
-    run_name='test'
+    run_name='Value_Iteration'
     #Number of simulation attempts for our policy and the default policies
     n_sims=100
     #Maximum simulation number of steps to try to get to goal - something goes very wrong if we hit this / can't get to goal
@@ -149,6 +165,17 @@ def main():
         terminal_mask=temp[3]
         end_location=temp[4]
 
+    #Samples option for Group 1
+    if generate_samples_flag:
+        #Generate teh T_samples
+        T_samples=generate_T_samples(T,transition_offsets,R,floor_mask,n_samples)
+        with open(T_samples_output_file, "wb") as fp:
+            pickle.dump(T_samples, fp)
+    else:
+        #Load the T_Samples
+        with open(T_samples_output_file, "rb") as fp:
+            T_samples = pickle.load(fp)
+    
     #Check on my log file
     log_file=os.getcwd() + '/' + log_file_name
     if not os.path.exists(log_file):
@@ -156,6 +183,7 @@ def main():
         file.write('Filename, Run Time (s), Mean Steps\n')
         file.close()
 
+    ##########################################################################################################################################
     #Group 2: Generation of a Policy
     if policy_eval_choice==1:
         if rerun_Value:
@@ -172,24 +200,25 @@ def main():
                 P=temp[1]
                 run_time=temp[2]
 
-        # Plot of the domain results
-        plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
-        cbar=plt.colorbar()
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        cbar.set_label('V')
-        x_end=end_location[0]/(n_x-1)*X_max
-        y_end=end_location[1]/(n_y-1)*Y_max
-        plt.scatter(x_end,y_end,s=10,color='red')
-        plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
-        x_start=start_location[0]/(n_x-1)*X_max
-        y_start=start_location[1]/(n_y-1)*Y_max
-        plt.scatter(x_start,y_start,s=10,color='white')
-        plt.text(x_start,y_start-0.1,'Start',fontsize=8,color='white')
-        plt.title('Value Function from Value Function Iteration')
-        plt.savefig(value_function_figure)
+        # Plot of the domain results (without trajectories)
+        # plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
+        # cbar=plt.colorbar()
+        # plt.xlabel('X')
+        # plt.ylabel('Y')
+        # cbar.set_label('V')
+        # x_end=end_location[0]/(n_x-1)*X_max
+        # y_end=end_location[1]/(n_y-1)*Y_max
+        # plt.scatter(x_end,y_end,s=10,color='red')
+        # plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
+        # x_start=start_location[0]/(n_x-1)*X_max
+        # y_start=start_location[1]/(n_y-1)*Y_max
+        # plt.scatter(x_start,y_start,s=10,color='white')
+        # plt.text(x_start,y_start-0.1,'Start',fontsize=8,color='white')
+        # plt.title('Value Function from Value Function Iteration')
+        # plt.savefig(value_function_figure)
         #plt.show()
 
+    #########################################################################################################################################################
     #Group 3: Trajectory simulations and metrics
     n_steps,trajs=simulate_traj_set(T,transition_offsets,P,n_sims,sim_max,end_location,start_location)
     mean_steps=np.mean(n_steps)
@@ -214,6 +243,12 @@ def main():
         print('Mean Number of Steps to Goal: '+ str(mean_steps_down))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_down[0],baseline_down_figure,'Down Policy')
 
+        #Update log
+        file=open(log_file,'a')
+        file.write('Baseline Down, 0, ' + str(mean_steps_down) + '\n')
+        file.close()
+
+
         #Go Across then Down policy
         P_across=baseline_across(floor_mask,end_location)
         n_steps_across,trajs_across=simulate_traj_set(T,transition_offsets,P_across,n_sims,sim_max,end_location,start_location)
@@ -222,15 +257,24 @@ def main():
         print('Mean Number of Steps to Goal: '+ str(mean_steps_across))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_across[0],baseline_across_figure,'Across Policy')
 
-        #Go Straight Policy
-        # P_straight=baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max)
-        # n_steps_straight,trajs_straight=simulate_traj_set(T,transition_offsets,P_straight,n_sims,sim_max,end_location,start_location)
-        # mean_steps_straight=np.mean(n_steps_straight)
-        # print('Baseline Straight')
-        # print('Mean Number of Steps to Goal: '+ str(mean_steps_straight))
-        # plot_traj(V,X_max,Y_max,end_location,start_location,trajs_across[0],baseline_straight_figure,'Straight Policy')
+        #Update log
+        file=open(log_file,'a')
+        file.write('Baseline Across, 0, ' + str(mean_steps_across) + '\n')
+        file.close()
 
-        breakpoint()
+        #Go Straight Policy
+        P_straight=baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max)
+        n_steps_straight,trajs_straight=simulate_traj_set(T,transition_offsets,P_straight,n_sims,sim_max,end_location,start_location)
+        mean_steps_straight=np.mean(n_steps_straight)
+        print('Baseline Straight')
+        print('Mean Number of Steps to Goal: '+ str(mean_steps_straight))
+        plot_traj(V,X_max,Y_max,end_location,start_location,trajs_straight[0],baseline_straight_figure,'Straight Policy')
+
+        #Update log
+        file=open(log_file,'a')
+        file.write('Baseline Straight, 0, ' + str(mean_steps_straight) + '\n')
+        file.close()
+
 #Main Caller    
 if __name__ == '__main__':
     main()

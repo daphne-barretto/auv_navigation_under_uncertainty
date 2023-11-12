@@ -244,3 +244,70 @@ def plot_traj(V,X_max,Y_max,end_location,start_location,traj,value_function_figu
     plt.plot(traj[:,0]/(n_x-1)*X_max,traj[:,1]/(n_y-1)*Y_max,'k--',linewidth=2)
     plt.title(plot_name)
     plt.savefig(value_function_figure)
+
+#Function to generate the T samples
+def generate_T_samples(T,transition_offsets,R,floor_mask,n_samples):
+    #Inputs
+    # T - Transition matrix of size nx x ny x num_actions x n x n
+    # transition_offsets - offsets for the different components in the transition matrix T - 1D vector, assumes same for i and j
+    # R - nx x ny reward matrix
+    # floor_mask - nx x ny mask that is 1 if the point is a floor point, 0 otherwise
+    # n_samples - number of samples to draw for a point in the domain
+
+    #Output:
+    # T-samples matrix
+    # Stored in Matrix_T_Samples
+    # column 0 - i for starting state
+    # column 1 - j for starting state
+    # column 2 - action a
+    # column 3 - Reward for starting state i,j
+    # column 4 - i for ending state
+    # column 5 - j for ending state
+    #Points in the wall are not included
+
+    #Size of the domain and actions
+    (nx,ny,num_actions,n1,n2)=T.shape
+
+    #Initialize the T_samples Matrix
+    T_samples=np.zeros((nx*ny*num_actions*n_samples,6))
+    count_index=0
+
+    #I/J offsets for the transition matrices
+    i_offset=np.tile(np.expand_dims(transition_offsets,-1),(1,n2))
+    j_offset=np.tile(np.expand_dims(transition_offsets,0),(n1,1))
+    i_offset=np.reshape(i_offset,n1*n2)
+    j_offset=np.reshape(j_offset,n1*n2)
+
+    #Loop to fill in the data with random draws
+    for i in range(nx):
+        print('Generating i = '+ str(i) + ' of '+ str(nx))
+        for j in range(ny):
+            #Skip points that are in the wall
+            if floor_mask[i,j]==0:
+                #Loop over the actions
+                for k in range(num_actions):
+                    #Extract the T matrix for this combination
+                    T_step=T[i,j,k,:,:]
+                    T_step=np.reshape(T_step,n1*n2)
+                    #Cumulative sum of the probabilities
+                    csum=np.cumsum(T_step)
+                    #Loop over the counts
+                    for m in range(n_samples):
+                        #Draw random number to determine which transition happened
+                        r_samp=np.random.uniform()
+                        #State we ended up in
+                        state_index=np.where(csum>=r_samp)
+                        #Save off this sample result
+                        T_samples[count_index,0]=i
+                        T_samples[count_index,1]=j
+                        T_samples[count_index,2]=k
+                        T_samples[count_index,3]=R[i,j]
+                        T_samples[count_index,4]=i+i_offset[state_index[0][0]]
+                        T_samples[count_index,5]=j+j_offset[state_index[0][0]]
+                        #Increment the index
+                        count_index+=1
+
+    #Crop down the size
+    T_samples=T_samples[0:count_index,:]
+
+    return T_samples
