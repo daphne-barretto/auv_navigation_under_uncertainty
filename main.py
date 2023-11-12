@@ -173,8 +173,11 @@ def main():
             pickle.dump(T_samples, fp)
     else:
         #Load the T_Samples
-        with open(T_samples_output_file, "rb") as fp:
-            T_samples = pickle.load(fp)
+        try:
+            with open(T_samples_output_file, "rb") as fp:
+                T_samples = pickle.load(fp)
+        except:
+            print('T_samples file was unavailable')
     
     #Check on my log file
     log_file=os.getcwd() + '/' + log_file_name
