@@ -6,8 +6,9 @@ import time
 import matplotlib.pyplot as plt  
 import numpy as np
 import pickle
-from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set
+from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj
 from value_iteration_gs import value_iteration
+from baseline_policies import baseline_down
 
 
 #Main Function
@@ -109,6 +110,10 @@ def main():
     #Simulation usually ends when we hit the endpoint
     sim_max=1000
 
+    #Run Baseline Policies Flag
+    run_baseline=True
+    baseline_down_figure='Figures/Baseline_Down.png'
+
     #############################################################################################################################################################################
     #Actual Code to run
 
@@ -189,30 +194,23 @@ def main():
     print('Mean Number of Steps to Goal: '+ str(mean_steps))
 
     # Plot of the domain results - currently set up to have a value function as the background
-    plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
-    cbar=plt.colorbar()
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    cbar.set_label('V')
-    x_end=end_location[0]/(n_x-1)*X_max
-    y_end=end_location[1]/(n_y-1)*Y_max
-    plt.scatter(x_end,y_end,s=10,color='red')
-    plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
-    x_start=start_location[0]/(n_x-1)*X_max
-    y_start=start_location[1]/(n_y-1)*Y_max
-    plt.scatter(x_start,y_start,s=10,color='white')
-    plt.text(x_start,y_start-0.1,'Start',fontsize=8,color='white')
-    temp=trajs[0]
-    plt.plot(temp[:,0]/(n_x-1)*X_max,temp[:,1]/(n_y-1)*Y_max,'k--',linewidth=2)
-    plt.title('Value Function from Value Function Iteration')
-    plt.savefig(value_function_figure)
-
+    plot_traj(V,X_max,Y_max,end_location,start_location,trajs[0],value_function_figure,'Value Function from Value Function Iteration')
 
     #Update log
     file=open(log_file,'a')
     file.write(run_name + ',' + str(run_time) + ',' + str(mean_steps) + '\n')
     file.close()
 
+
+    #Baselines for comparison
+    if run_baseline:
+        #Down then across policy
+        P_down=baseline_down(floor_mask,end_location)
+        n_steps_down,trajs_down=simulate_traj_set(T,transition_offsets,P_down,n_sims,sim_max,end_location,start_location)
+        mean_steps_down=np.mean(n_steps_down)
+        print('Mean Number of Steps to Goal: '+ str(mean_steps_down))
+        plot_traj(V,X_max,Y_max,end_location,start_location,trajs_down[0],baseline_down_figure,'Down Policy')
+        breakpoint()
 #Main Caller    
 if __name__ == '__main__':
     main()
