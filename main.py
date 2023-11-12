@@ -8,7 +8,7 @@ import numpy as np
 import pickle
 from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj
 from value_iteration_gs import value_iteration
-from baseline_policies import baseline_down
+from baseline_policies import baseline_down, baseline_across
 
 
 #Main Function
@@ -113,6 +113,7 @@ def main():
     #Run Baseline Policies Flag
     run_baseline=True
     baseline_down_figure='Figures/Baseline_Down.png'
+    baseline_across_figure='Figures/Baseline_Across.png'
 
     #############################################################################################################################################################################
     #Actual Code to run
@@ -208,8 +209,18 @@ def main():
         P_down=baseline_down(floor_mask,end_location)
         n_steps_down,trajs_down=simulate_traj_set(T,transition_offsets,P_down,n_sims,sim_max,end_location,start_location)
         mean_steps_down=np.mean(n_steps_down)
+        print('Baseline Down')
         print('Mean Number of Steps to Goal: '+ str(mean_steps_down))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_down[0],baseline_down_figure,'Down Policy')
+
+        #Go Across then Down policy
+        P_across=baseline_across(floor_mask,end_location)
+        n_steps_across,trajs_across=simulate_traj_set(T,transition_offsets,P_across,n_sims,sim_max,end_location,start_location)
+        mean_steps_across=np.mean(n_steps_across)
+        print('Baseline Across')
+        print('Mean Number of Steps to Goal: '+ str(mean_steps_across))
+        plot_traj(V,X_max,Y_max,end_location,start_location,trajs_across[0],baseline_across_figure,'Across Policy')
+
         breakpoint()
 #Main Caller    
 if __name__ == '__main__':
