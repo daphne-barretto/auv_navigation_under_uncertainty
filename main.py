@@ -114,6 +114,7 @@ def main():
     run_baseline=True
     baseline_down_figure='Figures/Baseline_Down.png'
     baseline_across_figure='Figures/Baseline_Across.png'
+    baseline_straight_figure='Figures/Baseline_Straight.png'
 
     #############################################################################################################################################################################
     #Actual Code to run
@@ -220,6 +221,14 @@ def main():
         print('Baseline Across')
         print('Mean Number of Steps to Goal: '+ str(mean_steps_across))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_across[0],baseline_across_figure,'Across Policy')
+
+        #Go Straight Policy
+        # P_straight=baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max)
+        # n_steps_straight,trajs_straight=simulate_traj_set(T,transition_offsets,P_straight,n_sims,sim_max,end_location,start_location)
+        # mean_steps_straight=np.mean(n_steps_straight)
+        # print('Baseline Straight')
+        # print('Mean Number of Steps to Goal: '+ str(mean_steps_straight))
+        # plot_traj(V,X_max,Y_max,end_location,start_location,trajs_across[0],baseline_straight_figure,'Straight Policy')
 
         breakpoint()
 #Main Caller    
