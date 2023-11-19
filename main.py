@@ -9,6 +9,8 @@ import pickle
 from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj, generate_T_samples
 from value_iteration_gs import value_iteration
 from baseline_policies import baseline_down, baseline_across, baseline_straight
+from q_learning import QLearningAgent
+from sarsa import SarsaAgent
 
 
 #Main Function
@@ -92,7 +94,7 @@ def main():
     #n_samples taken at each point i,j
     generate_samples_flag=False
     n_samples=100
-    T_samples_output_file='Saved_Data/T_samples.pkl'
+    T_samples_output_file='Saved_Data/samples.pkl'
 
 
     #########################################################
@@ -103,7 +105,7 @@ def main():
 
     #Evaluation Routine
     # 1 - Value Iteration with Gauss Seidel based on distance to goal
-    policy_eval_choice=1
+    policy_eval_choice=3
 
     ########################
     # Choice 1 Input Parameters
@@ -187,6 +189,9 @@ def main():
         file.close()
 
     ##########################################################################################################################################
+    image_title = 'DEFAULT'
+    image_file = 'Figure/DEFAULT.png'
+    
     #Group 2: Generation of a Policy
     if policy_eval_choice==1:
         if rerun_Value:
@@ -203,23 +208,76 @@ def main():
                 P=temp[1]
                 run_time=temp[2]
 
-        # Plot of the domain results (without trajectories)
-        # plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
-        # cbar=plt.colorbar()
-        # plt.xlabel('X')
-        # plt.ylabel('Y')
-        # cbar.set_label('V')
-        # x_end=end_location[0]/(n_x-1)*X_max
-        # y_end=end_location[1]/(n_y-1)*Y_max
-        # plt.scatter(x_end,y_end,s=10,color='red')
-        # plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
-        # x_start=start_location[0]/(n_x-1)*X_max
-        # y_start=start_location[1]/(n_y-1)*Y_max
-        # plt.scatter(x_start,y_start,s=10,color='white')
-        # plt.text(x_start,y_start-0.1,'Start',fontsize=8,color='white')
-        # plt.title('Value Function from Value Function Iteration')
-        # plt.savefig(value_function_figure)
-        #plt.show()
+        image_title = 'Value Function from Value Function Iteration'
+        image_file = 'Figures/Value_Iteration.png'
+
+    if policy_eval_choice==2:
+        if rerun_Value:
+            #Value iteration Code
+            V,P,run_time=value_iteration(R,T,terminal_mask,transition_offsets,floor_mask,end_location,gamma,iter_max,delta_V_end,V_walls)
+
+            #Write the outputs
+            with open(value_save_file, "wb") as fp:
+                pickle.dump((V,P,run_time), fp)
+        else:
+            with open(value_save_file, "rb") as fp:
+                temp = pickle.load(fp)
+                V=temp[0]
+                P=temp[1]
+                run_time=temp[2]
+
+        # states = n_x * n_y  # Assuming we have 100 states
+        actions = 4  # Assuming the agent can take 4 actions
+        alpha = 0.2   # Learning rate
+        gamma = 0.99   # Discount factor
+        epsilon = 0.2 # Exploration rate
+
+        # Initialize the agent
+        agent = QLearningAgent(n_x, n_y, actions, alpha, gamma, epsilon)
+
+        # Train the agent with the data
+        data = [tuple(row) for row in T_samples]
+        agent.learn(data)
+
+        # Extract the learned policy
+        P = np.argmax(agent.Q, axis=2)
+
+        image_title = 'Q-Learning Policy'
+        image_file = 'Figures/QLearning.png'
+
+    if policy_eval_choice==3:
+        if rerun_Value:
+            #Value iteration Code
+            V,P,run_time=value_iteration(R,T,terminal_mask,transition_offsets,floor_mask,end_location,gamma,iter_max,delta_V_end,V_walls)
+
+            #Write the outputs
+            with open(value_save_file, "wb") as fp:
+                pickle.dump((V,P,run_time), fp)
+        else:
+            with open(value_save_file, "rb") as fp:
+                temp = pickle.load(fp)
+                V=temp[0]
+                P=temp[1]
+                run_time=temp[2]
+
+        # states = n_x * n_y  # Assuming we have 100 states
+        actions = 4  # Assuming the agent can take 4 actions
+        alpha = 0.2   # Learning rate
+        gamma = 0.99   # Discount factor
+        epsilon = 0.2 # Exploration rate
+
+        # Initialize the agent
+        agent = SarsaAgent(n_x, n_y, actions, alpha, gamma, epsilon)
+
+        # Train the agent with the data
+        data = [tuple(row) for row in T_samples]
+        agent.learn(data)
+
+        # Extract the learned policy
+        P = np.argmax(agent.Q, axis=2)
+
+        image_title = 'SARSA Policy'
+        image_file = 'Figures/SARSA.png'
 
     #########################################################################################################################################################
     #Group 3: Trajectory simulations and metrics
@@ -228,7 +286,7 @@ def main():
     print('Mean Number of Steps to Goal: '+ str(mean_steps))
 
     # Plot of the domain results - currently set up to have a value function as the background
-    plot_traj(V,X_max,Y_max,end_location,start_location,trajs[0],value_function_figure,'Value Function from Value Function Iteration')
+    plot_traj(V,X_max,Y_max,end_location,start_location,trajs[0],image_file,image_title)
 
     #Update log
     file=open(log_file,'a')

@@ -1,6 +1,6 @@
 import numpy as np
 
-class QLearningAgent:
+class SarsaAgent:
     def __init__(self, num_rows, num_cols, actions, alpha, gamma, epsilon):
         self.Q = np.zeros((num_rows, num_cols, actions))  # 3D Q-table
         self.alpha = alpha                                # Learning rate
@@ -14,9 +14,10 @@ class QLearningAgent:
         action = int(action)
         next_i, next_j = next_state
         next_i, next_j = int(next_i), int(next_j)
-        max_future_q = np.max(self.Q[next_i, next_j, :])
+        next_action = self.choose_action((next_i, next_j))
+        next_q = self.Q[next_i, next_j, next_action]
         current_q = self.Q[i, j, action]
-        new_q = (1 - self.alpha) * current_q + self.alpha * (reward + self.gamma * max_future_q)
+        new_q = (1 - self.alpha) * current_q + self.alpha * (reward + self.gamma * next_q)
         self.Q[i, j, action] = new_q
 
     def choose_action(self, state):
