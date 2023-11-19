@@ -11,6 +11,7 @@ from value_iteration_gs import value_iteration
 from baseline_policies import baseline_down, baseline_across, baseline_straight
 from q_learning import QLearningAgent
 from sarsa import SarsaAgent
+from q_learning_nn import q_learning_neural_network
 
 
 #Main Function
@@ -115,6 +116,15 @@ def main():
     rerun_Value=False
     value_save_file='Saved_Data/Value_Iteration_gs.pkl'
     value_function_figure='Figures/Value_Iteration.png'
+
+    # Choice 4 Input Parameters - Q-Learning Neural Network
+    lr_nn = 1e-3 #Learning Rate for Adam Optimizer
+    n_max_nn=100 #Maximum number of neural network iterations
+    retrain_flag_nn=True #Retrain Flag for neural network
+    reload_weights_nn=False #Flag to start where we ended training last time
+    weight_file_nn='Saved_Data/checkpoints/nn'
+    model_path_nn='Saved_Data/nn.keras'
+    outputfilename_nn='Saved_Data/loss_training.png'
 
     ##########################################################
     #Group 3: Metric Evaluation + Visualizations
@@ -278,6 +288,10 @@ def main():
 
         image_title = 'SARSA Policy'
         image_file = 'Figures/SARSA.png'
+
+    if policy_eval_choice==4:
+            #Q-Learning with a Neural Network
+            [V,P]=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn)
 
     #########################################################################################################################################################
     #Group 3: Trajectory simulations and metrics
