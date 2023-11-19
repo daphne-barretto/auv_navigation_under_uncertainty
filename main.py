@@ -2,7 +2,6 @@
 #Final Project Main Run Function
 
 import os
-import time
 import matplotlib.pyplot as plt  
 import numpy as np
 import pickle
@@ -115,7 +114,6 @@ def main():
     V_walls=-100 #Value for in the walls, but as negative so it will easily stand out in the plot / will tell us quickly if I messed up the transition matrices
     rerun_Value=False
     value_save_file='Saved_Data/Value_Iteration_gs.pkl'
-    value_function_figure='Figures/Value_Iteration.png'
 
     # Choice 4 Input Parameters - Q-Learning Neural Network
     lr_nn = 1e-3 #Learning Rate for Adam Optimizer
@@ -139,7 +137,7 @@ def main():
     sim_max=1000
 
     #Run Baseline Policies Flag
-    run_baseline=True
+    run_baseline=False
     baseline_down_figure='Figures/Baseline_Down.png'
     baseline_across_figure='Figures/Baseline_Across.png'
     baseline_straight_figure='Figures/Baseline_Straight.png'
