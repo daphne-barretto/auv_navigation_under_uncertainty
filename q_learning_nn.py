@@ -48,6 +48,8 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
     loss_max=10**10
     #Loss threshold difference for save
     loss_threshold=10**4
+    #Batch size for data
+    batch_size=10**4
 
 
     ####################################################################################
@@ -55,7 +57,6 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
     V=floor_mask*V_default
     P=np.zeros_like(floor_mask)
     breakpoint()
-    
     #Construct the model
     Q_network=tf.keras.Sequential(name='Q_network')
     Q_network.add(tf.keras.Input(shape=(3,)))
@@ -83,7 +84,7 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
         #Model Free Q-Learning approach
         #Loss_time is the loss versus the training iteration - used to see if we are doing better
         
-        loss_training=Q_learning(Q_network, samples[:,0:2], samples[:,2], samples[:,4:], samples[:,3],gamma,opt_adam,n_max,weight_file,loss_max,loss_threshold,outputfilename,model_path)
+        loss_training=Q_learning(Q_network, samples[:,0:2], samples[:,2], samples[:,4:], samples[:,3],gamma,opt_adam,n_max,weight_file,loss_max,loss_threshold,outputfilename,model_path,batch_size)
         #End Time
         end_time=time.time()
         print("Run Time: " + str(end_time-start_time) + ' s')
@@ -113,7 +114,7 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
 #Function for Q_Learning Approach
 #This function is loosely based on a homework problem I completed in AA274A.
 
-def Q_learning(Q_network, S, A, Sp, r, gamma,opt_adam,n_max,weight_file,loss_max,loss_threshold,outputfilename,model_path):
+def Q_learning(Q_network, S, A, Sp, r, gamma,opt_adam,n_max,weight_file,loss_max,loss_threshold,outputfilename,model_path,batch_size):
     #Q_network - Keras Neural Net to be evaluating
     # S - Input vector for the state samples
     # A - Action vector for the samples
@@ -127,6 +128,7 @@ def Q_learning(Q_network, S, A, Sp, r, gamma,opt_adam,n_max,weight_file,loss_max
     #loss_threshold for save
     #outputfilename - filename to save off the intermediate loss plots
     #model_path - model saving path
+    #batch_size - size of the batches of data to take with each loss function call - randomly selected
 
     #Sizes
     n_states=S.shape[0]
@@ -138,20 +140,24 @@ def Q_learning(Q_network, S, A, Sp, r, gamma,opt_adam,n_max,weight_file,loss_max
     @tf.function
     def loss():
         #To figure out the Next Q we need to look at all possible actions and all possible next states
+        #Radnom selection of data
+        ridx = tf.random.uniform([batch_size], 0, S.shape[0], dtype=tf.int32)
+        S_, A_, Sp_, R_ = [tf.gather(z, ridx) for z in [S, A, Sp,r]]
+
         A_all = tf.tile(
             tf.range(A_max+1, dtype=tf.float32)[None, :, None], (n_states, 1, 1)
         )
-        Sp_all = tf.tile(Sp[:, None, :], (1, A_max+1, 1))
+        Sp_all = tf.tile(Sp_[:, None, :], (1, A_max+1, 1))
         A_all = tf.reshape(A_all, (-1, 1))
         Sp_all = tf.reshape(Sp_all, (-1, sdim))
         input = tf.concat([Sp_all, A_all], -1)
         next_Q_max = tf.reduce_max(tf.reshape(Q_network(input), (-1, A_max+1)), -1)
         #Calculate the Q results we currently have for our inputs
-        input = tf.concat([S, A], -1)
+        input = tf.concat([S_, A_], -1)
         #Current values of Q from our neural network
         Q = tf.reshape(Q_network(input), [-1])
         #Optimal solution approximation
-        Q_star=tf.squeeze(r)+gamma*next_Q_max
+        Q_star=tf.squeeze(R_)+gamma*next_Q_max
         #Compute mean error squared - could be another error if desired
         l=1/n_states*tf.reduce_sum((Q_star-Q)**2)/2
 

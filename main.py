@@ -289,7 +289,7 @@ def main():
 
     if policy_eval_choice==4:
             #Q-Learning with a Neural Network
-            [V,P]=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn)
+            [V,P]=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn,terminal_mask)
 
     #########################################################################################################################################################
     #Group 3: Trajectory simulations and metrics
