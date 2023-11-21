@@ -229,7 +229,7 @@ def plot_traj(V,X_max,Y_max,end_location,start_location,traj,value_function_figu
     (n_x,n_y)=V.shape
     plt.close()
     plt.imshow(V.T, origin="lower",extent=[0,X_max,0,Y_max])
-    cbar=plt.colorbar()
+    cbar=plt.colorbar(orientation='horizontal')
     plt.xlabel('X')
     plt.ylabel('Y')
     cbar.set_label('V')
@@ -244,6 +244,37 @@ def plot_traj(V,X_max,Y_max,end_location,start_location,traj,value_function_figu
     plt.plot(traj[:,0]/(n_x-1)*X_max,traj[:,1]/(n_y-1)*Y_max,'k--',linewidth=2)
     plt.title(plot_name)
     plt.savefig(value_function_figure)
+
+def plot_policy(P,X_max,Y_max,end_location,floor_mask,filename,plot_name):
+    #Inputs:
+    # P- Policy matrix
+    # X_max - X maximum for the domain (real units)
+    # Y_max - Y maximum for the domain (real units)
+    # end_location - (i,j) location of the end point
+    # floor_mask - wall locations
+    # filename - figure file to save the plot to
+    # Plot_name - title for the plot
+
+
+    #Size
+    (n_x,n_y)=P.shape
+
+    #Modify the policy to put the wall points at -1
+    P=P+floor_mask*(-1-P)
+
+    plt.close()
+    plt.imshow(P.T, origin="lower",extent=[0,X_max,0,Y_max])
+    cbar=plt.colorbar(ticks=[-1,0,1,2,3],orientation='horizontal')
+    cbar.ax.set_xticklabels(['Wall', 'Right', 'Left','Up','Down'])
+    x_end=end_location[0]/(n_x-1)*X_max
+    y_end=end_location[1]/(n_y-1)*Y_max
+    plt.scatter(x_end,y_end,s=10,color='red')
+    plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    cbar.set_label('P')
+    plt.title(plot_name)
+    plt.savefig(filename)
 
 #Function to generate the T samples
 def generate_T_samples(T,transition_offsets,R,floor_mask,n_samples):

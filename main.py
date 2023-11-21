@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt  
 import numpy as np
 import pickle
-from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj, generate_T_samples
+from utils import generate_floor_mask,generate_transition_matrix, simulate_traj_set,plot_traj, generate_T_samples, plot_policy
 from value_iteration_gs import value_iteration
 from baseline_policies import baseline_down, baseline_across, baseline_straight
 from q_learning import QLearningAgent
@@ -105,7 +105,7 @@ def main():
 
     #Evaluation Routine
     # 1 - Value Iteration with Gauss Seidel based on distance to goal
-    policy_eval_choice=3
+    policy_eval_choice=1
 
     ########################
     # Choice 1 Input Parameters
@@ -116,9 +116,9 @@ def main():
     value_save_file='Saved_Data/Value_Iteration_gs.pkl'
 
     # Choice 4 Input Parameters - Q-Learning Neural Network
-    lr_nn = 1e-3 #Learning Rate for Adam Optimizer
-    n_max_nn=100 #Maximum number of neural network iterations
-    retrain_flag_nn=True #Retrain Flag for neural network
+    lr_nn = 1e-5 #Learning Rate for Adam Optimizer
+    n_max_nn=40000 #Maximum number of neural network iterations
+    retrain_flag_nn=False #Retrain Flag for neural network
     reload_weights_nn=False #Flag to start where we ended training last time
     weight_file_nn='Saved_Data/checkpoints/nn'
     model_path_nn='Saved_Data/nn.keras'
@@ -129,9 +129,9 @@ def main():
     #Log File Name
     log_file_name='local_log.csv'
     #Run Name for this run
-    run_name='Value_Iteration'
+    run_name='Value'
     #Number of simulation attempts for our policy and the default policies
-    n_sims=100
+    n_sims=300
     #Maximum simulation number of steps to try to get to goal - something goes very wrong if we hit this / can't get to goal
     #Simulation usually ends when we hit the endpoint
     sim_max=1000
@@ -141,10 +141,13 @@ def main():
     baseline_down_figure='Figures/Baseline_Down.png'
     baseline_across_figure='Figures/Baseline_Across.png'
     baseline_straight_figure='Figures/Baseline_Straight.png'
+   
 
     #############################################################################################################################################################################
     #Actual Code to run
-
+    #Images information that will be replaced with a specific option
+    image_title = 'DEFAULT'
+    image_file = 'Figures/DEFAULT.png'
     #Group 1: Domain generation
     if regenerate_flag:
         #Read in the floor of the ocean and generate a mask file that is 1 where the ocean floor is in our discretized domain and 0 otherwise
@@ -193,12 +196,11 @@ def main():
     log_file=os.getcwd() + '/' + log_file_name
     if not os.path.exists(log_file):
         file=open(log_file,'w')
-        file.write('Filename, Run Time (s), Mean Steps\n')
+        file.write('Filename, Run Time (s), Mean Steps, STD Steps\n')
         file.close()
 
     ##########################################################################################################################################
-    image_title = 'DEFAULT'
-    image_file = 'Figure/DEFAULT.png'
+  
     
     #Group 2: Generation of a Policy
     if policy_eval_choice==1:
@@ -289,8 +291,9 @@ def main():
 
     if policy_eval_choice==4:
             #Q-Learning with a Neural Network
-            V,P=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn,terminal_mask)
-
+            V,P,run_time=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn,terminal_mask)
+            image_title = 'Q_NN'
+            image_file = 'Figures/Q_NN.png'
     #########################################################################################################################################################
     #Group 3: Trajectory simulations and metrics
     n_steps,trajs=simulate_traj_set(T,transition_offsets,P,n_sims,sim_max,end_location,start_location)
@@ -299,10 +302,11 @@ def main():
 
     # Plot of the domain results - currently set up to have a value function as the background
     plot_traj(V,X_max,Y_max,end_location,start_location,trajs[0],image_file,image_title)
+    plot_policy(P,X_max,Y_max,end_location,floor_mask,image_file.replace('.png','_policy.png'),image_title)
 
     #Update log
     file=open(log_file,'a')
-    file.write(run_name + ',' + str(run_time) + ',' + str(mean_steps) + '\n')
+    file.write(run_name + ',' + str(run_time) + ',' + str(mean_steps) + ',' + str(np.std(n_steps)) + '\n')
     file.close()
 
 
@@ -315,10 +319,11 @@ def main():
         print('Baseline Down')
         print('Mean Number of Steps to Goal: '+ str(mean_steps_down))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_down[0],baseline_down_figure,'Down Policy')
+        plot_policy(P_down,X_max,Y_max,end_location,floor_mask,baseline_down_figure.replace('.png','_policy.png'),'Down Policy')
 
         #Update log
         file=open(log_file,'a')
-        file.write('Baseline Down, 0, ' + str(mean_steps_down) + '\n')
+        file.write('Baseline Down, 0, ' + str(mean_steps_down) + ',' + str(np.std(n_steps_down)) + '\n')
         file.close()
 
 
@@ -329,10 +334,12 @@ def main():
         print('Baseline Across')
         print('Mean Number of Steps to Goal: '+ str(mean_steps_across))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_across[0],baseline_across_figure,'Across Policy')
+        plot_policy(P_across,X_max,Y_max,end_location,floor_mask,baseline_across_figure.replace('.png','_policy.png'),'Across Policy')
+        
 
         #Update log
         file=open(log_file,'a')
-        file.write('Baseline Across, 0, ' + str(mean_steps_across) + '\n')
+        file.write('Baseline Across, 0, ' + str(mean_steps_across) + ',' + str(np.std(n_steps_across)) + '\n')
         file.close()
 
         #Go Straight Policy
@@ -342,10 +349,11 @@ def main():
         print('Baseline Straight')
         print('Mean Number of Steps to Goal: '+ str(mean_steps_straight))
         plot_traj(V,X_max,Y_max,end_location,start_location,trajs_straight[0],baseline_straight_figure,'Straight Policy')
+        plot_policy(P_straight,X_max,Y_max,end_location,floor_mask,baseline_straight_figure.replace('.png','_policy.png'),'Straight Policy')
 
         #Update log
         file=open(log_file,'a')
-        file.write('Baseline Straight, 0, ' + str(mean_steps_straight) + '\n')
+        file.write('Baseline Straight, 0, ' + str(mean_steps_straight) + ',' + str(np.std(n_steps_straight)) + '\n')
         file.close()
 
 #Main Caller    

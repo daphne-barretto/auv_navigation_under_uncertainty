@@ -46,11 +46,11 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
 
     #Hard coded parameters for training / saves
     #Starting Maximum loss for comparsion
-    loss_max=10**10
+    loss_max=10
     #Loss threshold difference for save
-    loss_threshold=10**4
+    loss_threshold=0.01
     #Batch size for data
-    batch_size=10**4
+    batch_size=3*10**5
 
 
     ####################################################################################
@@ -58,7 +58,7 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
     V=floor_mask*V_default
     P=np.zeros_like(floor_mask,dtype='int32')
     (nx,ny)=V.shape
-    action_max=np.max(samples[:,2])
+    action_max=int(np.max(samples[:,2]))
 
     #Construct the model
     Q_network=tf.keras.Sequential(name='Q_network')
@@ -66,7 +66,7 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
     Q_network.add(tf.keras.layers.Dense(20,activation='relu',name='Hidden1'))
     Q_network.add(tf.keras.layers.Dense(20,activation='relu',name='Hidden2'))
     Q_network.add(tf.keras.layers.Dense(20,activation='relu',name='Hidden3'))
-    Q_network.add(tf.keras.layers.Dense(20,activation='relu',name='Hidden4'))
+    #Q_network.add(tf.keras.layers.Dense(20,activation='relu',name='Hidden4'))
     Q_network.add(tf.keras.layers.Dense(1,activation='linear',name='Qoutput'))
 
     #Adam Optimizer
@@ -86,10 +86,15 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
         start_time=time.time()
         #Model Free Q-Learning approach
         #Loss_time is the loss versus the training iteration - used to see if we are doing better
-        
-        loss_training=Q_learning(Q_network, samples[:,0:2], samples[:,2], samples[:,4:], samples[:,3],gamma,opt_adam,n_max,weight_file,loss_max,loss_threshold,outputfilename,model_path,batch_size,terminal_mask)
+        S=tf.convert_to_tensor(samples[:,0:2],dtype=tf.float32)
+        Sp=tf.convert_to_tensor(samples[:,4:],dtype=tf.float32)
+        A=tf.convert_to_tensor(np.expand_dims(samples[:,2],axis=-1),dtype=tf.float32)
+        R=tf.convert_to_tensor(np.expand_dims(samples[:,3],axis=-1),dtype=tf.float32)
+        terminal_flag=tf.convert_to_tensor(np.expand_dims(terminal_mask[samples[:,0].astype('int32'),samples[:,1].astype('int32')],axis=-1),dtype=tf.float32)
+        loss_training=Q_learning(Q_network, S, A, Sp, R,gamma,opt_adam,n_max,weight_file,loss_max,loss_threshold,outputfilename,model_path,batch_size,terminal_flag)
         #End Time
         end_time=time.time()
+        run_time=end_time-start_time
         print("Run Time: " + str(end_time-start_time) + ' s')
 
         #Save Weights
@@ -108,6 +113,7 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
         #Just load the weights for the model
         Q_network=tf.keras.models.load_model(model_path)
         Q_network.load_weights(weight_file)
+        run_time=0
 
     #Evaluate our final Q function over the points that are not the floor
 
@@ -116,7 +122,7 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
     for i in range(nx):
         for j in range(ny):
             #Floor Mask
-            if floor_mask[i,j]: 
+            if floor_mask[i,j]==0: 
                 X=np.array([i,j])
                 X=np.expand_dims(X,0)
                 #Tile inputs of the state with the action number
@@ -125,12 +131,12 @@ def q_learning_neural_network(samples,lr,n_max,gamma,retrain_flag,reload_weights
                 input=tf.convert_to_tensor(np.concatenate((X,actions),axis=1),dtype=tf.float32)
                 #Evaluate the Q_network
                 q_out=Q_network(input)
-                #Best action choice - return to 1 index instead of 0
+                #Best action and value
                 P[i,j]=int(tf.argmax(q_out))
+                V[i,j]=tf.reduce_max(q_out)
 
 
-
-    return V,P
+    return V,P,run_time
 
 
 #Q-Learning Iteration
@@ -152,25 +158,32 @@ def Q_learning(Q_network, S, A, Sp, r, gamma,opt_adam,n_max,weight_file,loss_max
     #outputfilename - filename to save off the intermediate loss plots
     #model_path - model saving path
     #batch_size - size of the batches of data to take with each loss function call - randomly selected
-    #Terminal mask for the points -nx,ny
+    #Terminal mask for the points
+
 
     #Sizes
-    n_states=S.shape[0]
     sdim=S.shape[1]
 
     #Maximum value of the actions in U - 0 indexed to do a full sweep for evaluation of the max term
     #This loss is based on equations 17.16 and 17.20 in Algorithms for Decision making by Kochenderfer
     A_max=int(tf.math.reduce_max(A))
+
     @tf.function
     def loss():
         #To figure out the Next Q we need to look at all possible actions and all possible next states
-        #Radnom selection of data
-        ridx = tf.random.uniform([batch_size], 0, S.shape[0], dtype=tf.int32)
-        S_, A_, Sp_, R_ = [tf.gather(z, ridx) for z in [S, A, Sp,r]]
+        #Random selection of data
+        #ridx = tf.random.uniform([batch_size], 0, S.shape[0], dtype=tf.int32)
+        #S_, A_, Sp_, R_,t_ = [tf.gather(z, ridx) for z in [S, A, Sp,r,terminal_mask]]
+        
+        #Usea ll the points
+        batch_size=A.shape[0]
+        S_=S
+        A_=A
+        Sp_=Sp
+        R_=r
+        t_=terminal_mask
 
-        A_all = tf.tile(
-            tf.range(A_max+1, dtype=tf.float32)[None, :, None], (batch_size, 1, 1)
-        )
+        A_all = tf.tile(tf.range(A_max+1, dtype=tf.float32)[None, :, None], (batch_size, 1, 1))
         Sp_all = tf.tile(Sp_[:, None, :], (1, A_max+1, 1))
         A_all = tf.reshape(A_all, (-1, 1))
         Sp_all = tf.reshape(Sp_all, (-1, sdim))
@@ -179,12 +192,19 @@ def Q_learning(Q_network, S, A, Sp, r, gamma,opt_adam,n_max,weight_file,loss_max
         #Calculate the Q results we currently have for our inputs
         input = tf.concat([S_, A_], -1)
         #Current values of Q from our neural network
-        Q = tf.reshape(Q_network(input), [-1])
-        breakpoint()
+        Q = Q_network(input)
+
+        #Create the is terminal mask for these points
+        terminal_cases=t_*R_
+        #Non-terminal cases
+        non_terminal_cases=(1-t_)*(R_+gamma*tf.expand_dims(next_Q_max,axis=-1))
         #Optimal solution approximation
-        Q_star=tf.squeeze(R_)+gamma*next_Q_max
+        Q_star=terminal_cases+non_terminal_cases
         #Compute mean error squared - could be another error if desired
-        l=1/n_states*tf.reduce_sum((Q_star-Q)**2)/2
+        l=1/batch_size*tf.reduce_sum((Q_star-Q)**2)/2
+
+        # need to regularize the Q-value, because we're training its difference
+        #l = l + 1e-3 * tf.reduce_mean(Q ** 2)
 
         return l
 
