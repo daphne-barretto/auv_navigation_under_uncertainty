@@ -121,6 +121,11 @@ def main():
     V_walls=-100 #Value for in the walls, but as negative so it will easily stand out in the plot / will tell us quickly if I messed up the transition matrices
     rerun_Value=False
     
+    # Choice 2 inputs
+    n_iter2=20
+
+    # Choice 3 inputs
+    n_iter3=20
 
     # Choice 4 Input Parameters - Q-Learning Neural Network
     lr_nn = 1e-5 #Learning Rate for Adam Optimizer
@@ -191,6 +196,11 @@ def main():
     if generate_samples_flag:
         #Generate teh T_samples
         T_samples=generate_T_samples(T,transition_offsets,R,floor_mask,n_samples)
+        #Reorder these to be from the closest to the end from the furthest
+        distance=np.sqrt((end_location[0]-T_samples[:,0])**2+(end_location[1]-T_samples[:,1])**2)
+        order_list=np.argsort(distance)
+        T_samples=T_samples[order_list,:]
+
         with open(T_samples_output_file, "wb") as fp:
             pickle.dump(T_samples, fp)
     else:
@@ -259,7 +269,8 @@ def main():
 
         # Train the agent with the data
         data = [tuple(row) for row in T_samples]
-        agent.learn(data)
+        for iter in range(n_iter2):
+            agent.learn(data)
         #Run time
         end_time=time.time()
         run_time=end_time-start_time
@@ -301,7 +312,8 @@ def main():
 
         # Train the agent with the data
         data = [tuple(row) for row in T_samples]
-        agent.learn(data)
+        for iter in range(n_iter3):
+            agent.learn(data)
         #Run time
         end_time=time.time()
         run_time=end_time-start_time
