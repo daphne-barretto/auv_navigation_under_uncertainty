@@ -106,7 +106,7 @@ def main():
 
     #Evaluation Routine
     # 1 - Value Iteration with Gauss Seidel based on distance to goal
-    policy_eval_choice=1
+    policy_eval_choice=3
 
     #Output save names for the different files
     value_save_file='Saved_Data/Value_Iteration_gs.pkl'
