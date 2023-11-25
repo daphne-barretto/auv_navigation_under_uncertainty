@@ -5,9 +5,9 @@ import numpy as np
 
 #All Baseline Policies use hard coded actions
 # 0 - go in the +x direction 1 unit i
-# 1 - go in the -x direction 1 unit i
-# 2 - go in the +y direction 1 unit j
-# 3 - go in the -y direction 1 unit j
+# 1 - go in the -y direction 1 unit j
+# 2 - go in the -x direction 1 unit i
+# 3 - go in the +y direction 1 unit j
 
 #Basic policy that goes down to the ocean floor and then follows the floor until we hit the end location
 def baseline_down(floor_mask,end_location):
@@ -23,15 +23,15 @@ def baseline_down(floor_mask,end_location):
 
     #Actions
     # 0 - go in the +x direction 1 unit i
-    # 1 - go in the -x direction 1 unit i
-    # 2 - go in the +y direction 1 unit j
-    # 3 - go in the -y direction 1 unit j
+    # 1 - go in the -y direction 1 unit j
+    # 2 - go in the -x direction 1 unit i
+    # 3 - go in the +y direction 1 unit j
 
     #Extract the shape nx x ny
     (nx,ny)=floor_mask.shape
 
     #This policy will always go down until it hits the floor - along the floor it will follow the floor towards the goal
-    P=np.ones((nx,ny),dtype='int32')*3
+    P=np.ones((nx,ny),dtype='int32')*1
 
     #Loop to find us going along the floor - if there is a mask point to the side and below to the side then we would go up. if there is a mask point below and to the side, but not to the side go towards the goal
     for i in range(nx):
@@ -46,12 +46,12 @@ def baseline_down(floor_mask,end_location):
                 if floor_mask[sgn_move+i,j-1]==1 or floor_mask[i,j-1]==1:
                     #See if the point to towards us is a wall - if not step in that x-direction, otherwise, step up
                     if floor_mask[sgn_move+i,j]==1:
-                        P[i,j]=2
+                        P[i,j]=3
                     else:
                         if sgn_move>0:
                             P[i,j]=0
                         else:
-                            P[i,j]=1
+                            P[i,j]=2
 
     #Return the policy
     return P
@@ -69,21 +69,21 @@ def baseline_across(floor_mask,end_location):
     #
     # Assume there are no caves in floor
 
-    #Actions
+    # Actions
     # 0 - go in the +x direction 1 unit i
-    # 1 - go in the -x direction 1 unit i
-    # 2 - go in the +y direction 1 unit j
-    # 3 - go in the -y direction 1 unit j
+    # 1 - go in the -y direction 1 unit j
+    # 2 - go in the -x direction 1 unit i
+    # 3 - go in the +y direction 1 unit j
 
     #Extract the shape nx x ny
     (nx,ny)=floor_mask.shape
 
     #This policy will always go down until it hits the floor - along the floor it will follow the floor towards the goal
-    P=np.ones((nx,ny),dtype='int32')*3
+    P=np.ones((nx,ny),dtype='int32')*1
 
     #Define all points that are at i less than the goal to go right, all with i greater than the goal to go left
     P[0:end_location[0],:]=0
-    P[end_location[0]+1:,:]=1
+    P[end_location[0]+1:,:]=2
 
 
     #Loop to find us going along the floor - if there is a mask point to the side and below to the side then we would go up. if there is a mask point below and to the side, but not to the side go towards the goal
@@ -99,12 +99,12 @@ def baseline_across(floor_mask,end_location):
                 if floor_mask[sgn_move+i,j-1]==1 or floor_mask[i,j-1]==1:
                     #See if the point to towards us is a wall - if not step in that x-direction, otherwise, step up
                     if floor_mask[sgn_move+i,j]==1:
-                        P[i,j]=2
+                        P[i,j]=3
                     else:
                         if sgn_move>0:
                             P[i,j]=0
                         else:
-                            P[i,j]=1
+                            P[i,j]=2
 
     #Return the policy
     return P
@@ -124,15 +124,15 @@ def baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max):
 
     #Actions
     # 0 - go in the +x direction 1 unit i
-    # 1 - go in the -x direction 1 unit i
-    # 2 - go in the +y direction 1 unit j
-    # 3 - go in the -y direction 1 unit j
+    # 1 - go in the -y direction 1 unit j
+    # 2 - go in the -x direction 1 unit i
+    # 3 - go in the +y direction 1 unit j
 
       #Extract the shape nx x ny
     (nx,ny)=floor_mask.shape
 
     #This policy will always go down until it hits the floor - along the floor it will follow the floor towards the goal
-    P=np.ones((nx,ny),dtype='int32')*3
+    P=np.ones((nx,ny),dtype='int32')*1
 
     #Loop over all the points to choose the action that best moves us closest to the goal
     x_goal=end_location[0]*X_max/(nx-1)
@@ -171,12 +171,12 @@ def baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max):
                 if floor_mask[sgn_move+i,j-1]==1 or floor_mask[i,j-1]==1:
                     #See if the point to towards us is a wall - if not step in that x-direction, otherwise, step up
                     if floor_mask[sgn_move+i,j]==1:
-                        P[i,j]=2
+                        P[i,j]=3
                     else:
                         if sgn_move>0:
                             P[i,j]=0
                         else:
-                            P[i,j]=1
+                            P[i,j]=2
 
     #Return the policy
     return P

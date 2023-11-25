@@ -11,6 +11,7 @@ from baseline_policies import baseline_down, baseline_across, baseline_straight
 from q_learning import QLearningAgent
 from sarsa import SarsaAgent
 from q_learning_nn import q_learning_neural_network
+import time
 
 
 #Main Function
@@ -42,16 +43,16 @@ def main():
 
     #Action Space - 4 possible actions since we assume we always want to be trying to head towards the goal - affects the mean of the distribution we would draw our next state from
     # 0 - go in the +x direction 1 unit i
-    # 1 - go in the -x direction 1 unit i
-    # 2 - go in the +y direction 1 unit j
-    # 3 - go in the -y direction 1 unit j
+    # 1 - go in the -y direction 1 unit j
+    # 2 - go in the -x direction 1 unit i
+    # 3 - go in the +y direction 1 unit j
     # action offsets captures these as action[a,0] is the i_offset, action[a,1] is the j offset
     action_max=3
     action_offsets=np.zeros((action_max+1,2))
     action_offsets[0,:]=[1,0]
-    action_offsets[1,:]=[-1,0]
-    action_offsets[2,:]=[0,1]
-    action_offsets[3,:]=[0,-1]
+    action_offsets[1,:]=[0,-1]
+    action_offsets[2,:]=[-1,0]
+    action_offsets[3,:]=[0,1]
 
     #Reward Matrix - assume this is only a function of the state s, with a reward only at reaching our goal
     #Default reward is 0
@@ -93,7 +94,7 @@ def main():
     #Points in the wall are not included
     #n_samples taken at each point i,j
     generate_samples_flag=False
-    n_samples=100
+    n_samples=10
     T_samples_output_file='Saved_Data/samples.pkl'
 
 
@@ -107,19 +108,26 @@ def main():
     # 1 - Value Iteration with Gauss Seidel based on distance to goal
     policy_eval_choice=1
 
+    #Output save names for the different files
+    value_save_file='Saved_Data/Value_Iteration_gs.pkl'
+    q_save_file='Saved_Data/Q.pkl'
+    sarsa_save_file='Saved_Data/SARSA.pkl'
+    q_nn_save_file='Saved_Data/Q_NN.pkl'
+
     ########################
     # Choice 1 Input Parameters
-    iter_max=200
+    iter_max=400
     delta_V_end=0.1
     V_walls=-100 #Value for in the walls, but as negative so it will easily stand out in the plot / will tell us quickly if I messed up the transition matrices
     rerun_Value=False
-    value_save_file='Saved_Data/Value_Iteration_gs.pkl'
+    
 
     # Choice 4 Input Parameters - Q-Learning Neural Network
     lr_nn = 1e-5 #Learning Rate for Adam Optimizer
-    n_max_nn=40000 #Maximum number of neural network iterations
-    retrain_flag_nn=False #Retrain Flag for neural network
+    n_max_nn=10000 #Maximum number of neural network iterations
+    retrain_flag_nn=True #Retrain Flag for neural network
     reload_weights_nn=False #Flag to start where we ended training last time
+    iterate_flag=False
     weight_file_nn='Saved_Data/checkpoints/nn'
     model_path_nn='Saved_Data/nn.keras'
     outputfilename_nn='Saved_Data/loss_training.png'
@@ -129,7 +137,7 @@ def main():
     #Log File Name
     log_file_name='local_log.csv'
     #Run Name for this run
-    run_name='Value'
+    run_name='Value_Iteration'
     #Number of simulation attempts for our policy and the default policies
     n_sims=300
     #Maximum simulation number of steps to try to get to goal - something goes very wrong if we hit this / can't get to goal
@@ -166,7 +174,7 @@ def main():
 
         #Write out the generated results
         with open(domain_output_file, "wb") as fp:
-            pickle.dump((R, T, floor_mask, terminal_mask,end_location), fp)
+            pickle.dump((R, T, floor_mask, terminal_mask,end_location,transition_offsets), fp)
     else:
         #Reload previously generated information
         #Load the Value iteration variables
@@ -177,6 +185,7 @@ def main():
         floor_mask=temp[2]
         terminal_mask=temp[3]
         end_location=temp[4]
+        transition_offsets=temp[5]
 
     #Samples option for Group 1
     if generate_samples_flag:
@@ -236,6 +245,9 @@ def main():
                 P=temp[1]
                 run_time=temp[2]
 
+        #Start time
+        start_time=time.time()
+
         # states = n_x * n_y  # Assuming we have 100 states
         actions = 4  # Assuming the agent can take 4 actions
         alpha = 0.2   # Learning rate
@@ -248,9 +260,15 @@ def main():
         # Train the agent with the data
         data = [tuple(row) for row in T_samples]
         agent.learn(data)
-
+        #Run time
+        end_time=time.time()
+        run_time=end_time-start_time
         # Extract the learned policy
         P = np.argmax(agent.Q, axis=2)
+        V_Q= np.max(agent.Q, axis=2)
+        #Write the outputs
+        with open(q_save_file, "wb") as fp:
+            pickle.dump((V_Q,P,run_time), fp)
 
         image_title = 'Q-Learning Policy'
         image_file = 'Figures/QLearning.png'
@@ -270,6 +288,8 @@ def main():
                 P=temp[1]
                 run_time=temp[2]
 
+        #Start time
+        start_time=time.time()
         # states = n_x * n_y  # Assuming we have 100 states
         actions = 4  # Assuming the agent can take 4 actions
         alpha = 0.2   # Learning rate
@@ -282,18 +302,28 @@ def main():
         # Train the agent with the data
         data = [tuple(row) for row in T_samples]
         agent.learn(data)
-
+        #Run time
+        end_time=time.time()
+        run_time=end_time-start_time
         # Extract the learned policy
         P = np.argmax(agent.Q, axis=2)
+        V_SARSA= np.max(agent.Q, axis=2)
+        #Write the outputs
+        with open(sarsa_save_file, "wb") as fp:
+            pickle.dump((V_SARSA,P,run_time), fp)
 
         image_title = 'SARSA Policy'
         image_file = 'Figures/SARSA.png'
 
     if policy_eval_choice==4:
-            #Q-Learning with a Neural Network
-            V,P,run_time=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn,terminal_mask)
-            image_title = 'Q_NN'
-            image_file = 'Figures/Q_NN.png'
+        #Q-Learning with a Neural Network
+        V,P,run_time=q_learning_neural_network(T_samples,lr_nn,n_max_nn,gamma,retrain_flag_nn,reload_weights_nn,weight_file_nn,model_path_nn,floor_mask,V_walls,outputfilename_nn,terminal_mask,iterate_flag,T,transition_offsets,end_location,start_location)
+        image_title = 'Q_NN'
+        image_file = 'Figures/Q_NN.png'
+        #Write the outputs
+        with open(q_nn_save_file, "wb") as fp:
+            pickle.dump((V,P,run_time), fp)
+
     #########################################################################################################################################################
     #Group 3: Trajectory simulations and metrics
     n_steps,trajs=simulate_traj_set(T,transition_offsets,P,n_sims,sim_max,end_location,start_location)

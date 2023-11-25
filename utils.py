@@ -120,7 +120,7 @@ def generate_transition_matrix(T,transition_offsets,action_offsets,T_stat_mean,T
                         for jj in range(n2):
                             if j+transition_offsets[jj]<0:
                                 #Rolling addition over
-                                T_temp[:,jj+1,:]+=T_temp[:,jj]
+                                T_temp[:,jj+1]+=T_temp[:,jj]
                                 T_temp[:,jj]=0
                     #Upper bound i case
                     if j>np.abs(np.max(transition_offsets))-1:
@@ -265,7 +265,7 @@ def plot_policy(P,X_max,Y_max,end_location,floor_mask,filename,plot_name):
     plt.close()
     plt.imshow(P.T, origin="lower",extent=[0,X_max,0,Y_max])
     cbar=plt.colorbar(ticks=[-1,0,1,2,3],orientation='horizontal')
-    cbar.ax.set_xticklabels(['Wall', 'Right', 'Left','Up','Down'])
+    cbar.ax.set_xticklabels(['Wall', 'Right', 'Down','Left','Up'])
     x_end=end_location[0]/(n_x-1)*X_max
     y_end=end_location[1]/(n_y-1)*Y_max
     plt.scatter(x_end,y_end,s=10,color='red')
