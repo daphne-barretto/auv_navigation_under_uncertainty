@@ -59,6 +59,7 @@ def main():
 
     #Trajectory Images
     image_file='Final_Inputs/Traj_X.png'
+    start_point_image='Final_Inputs/Start_Points.png'
 
     ########################################################################
     #Log file header
@@ -97,6 +98,23 @@ def main():
     P_across=baseline_across(floor_mask,end_location)
     P_straight=baseline_straight(floor_mask,end_location,action_offsets,X_max,Y_max)
 
+
+    #Plot of just the start locations on a grid
+    plt.close()
+    plt.figure(figsize=(10,6))
+    plt.imshow(floor_mask.T, origin="lower",extent=[0,X_max,0,Y_max],cmap='Greys')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    for ind in range(start_location.shape[0]):
+        x_start=start_location[ind,0]/(n_x-1)*X_max
+        y_start=start_location[ind,1]/(n_y-1)*Y_max
+        plt.scatter(x_start,y_start,s=10,color='green',label='Start')
+    x_end=end_location[0]/(n_x-1)*X_max
+    y_end=end_location[1]/(n_y-1)*Y_max
+    plt.scatter(x_end,y_end,s=10,color='red',label='End')
+    plt.text(x_end,y_end-0.1,'End',fontsize=8,color='red')
+    plt.title('Starting Points')
+    plt.savefig(start_point_image)
 
     #Iteration Over the different start points
     for ind in range(start_location.shape[0]):
