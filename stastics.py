@@ -30,6 +30,7 @@ def main():
     q_save_file='Final_Inputs/Q.pkl'
     sarsa_save_file='Final_Inputs/SARSA.pkl'
     q_nn_save_file='Final_Inputs/Q_NN.pkl'
+    elligibility_save_file='Final_Inputs/SARSA.pkl'
 
     #Log File
     log_file='stastics.csv'
@@ -93,6 +94,11 @@ def main():
         temp = pickle.load(fp)
         P_sarsa=temp[1]
         run_time_sarsa=temp[2]
+    #Elligibility Traces Learning policy
+    with open(elligibility_save_file, "rb") as fp:
+        temp = pickle.load(fp)
+        P_e=temp[1]
+        run_time_e=temp[2]
     #Baseline Policies
     P_down=baseline_down(floor_mask,end_location)
     P_across=baseline_across(floor_mask,end_location)
@@ -138,6 +144,13 @@ def main():
         file=open(log_file,'a')
         file.write('SARSA, ' + str(ind) +  ', ' + str(run_time_sarsa) +', '+ str(np.mean(n_steps_sarsa)) +', ' + str(np.std(n_steps_sarsa)) + '\n')
         file.close()
+        #Evaluate Elligibility Traces
+        n_steps_e,trajs_e=simulate_traj_set(T,transition_offsets,P_e,n_sims,sim_max,end_location,start_location[ind,:])
+        #Write out the results to the log
+        file=open(log_file,'a')
+        file.write('Elligibility, ' + str(ind) +  ', ' + str(run_time_e) +', '+ str(np.mean(n_steps_e)) +', ' + str(np.std(n_steps_e)) + '\n')
+        file.close()
+
 
         #Evaluate Down
         n_steps_down,trajs_down=simulate_traj_set(T,transition_offsets,P_down,n_sims,sim_max,end_location,start_location[ind,:])
@@ -169,6 +182,7 @@ def main():
         plt.plot(trajs_val[0][:,0]/(n_x-1)*X_max,trajs_val[0][:,1]/(n_y-1)*Y_max,'b',linewidth=2,label='Value')
         plt.plot(trajs_q[0][:,0]/(n_x-1)*X_max,trajs_q[0][:,1]/(n_y-1)*Y_max,'g',linewidth=2,label='Q')
         plt.plot(trajs_sarsa[0][:,0]/(n_x-1)*X_max,trajs_sarsa[0][:,1]/(n_y-1)*Y_max,'r',linewidth=2,label='SARSA')
+        plt.plot(trajs_e[0][:,0]/(n_x-1)*X_max,trajs_e[0][:,1]/(n_y-1)*Y_max,color=[0.5,0.5,0.5],linewidth=2,label='Eligibility Traces')
         plt.plot(trajs_down[0][:,0]/(n_x-1)*X_max,trajs_down[0][:,1]/(n_y-1)*Y_max,'c',linewidth=2,label='Down')
         plt.plot(trajs_across[0][:,0]/(n_x-1)*X_max,trajs_across[0][:,1]/(n_y-1)*Y_max,'m',linewidth=2,label='Across')
         plt.plot(trajs_straight[0][:,0]/(n_x-1)*X_max,trajs_straight[0][:,1]/(n_y-1)*Y_max,'k',linewidth=2,label='Straight')
