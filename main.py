@@ -220,6 +220,12 @@ def main():
 
     ##########################################################################################################################################
   
+    #Temporary code to do the policy plot for elgibility traces
+    #elligibility_save_file='Final_Inputs/eligibility_trace_policy2.pkl'
+    #with open(elligibility_save_file, "rb") as fp:
+    #    temp = pickle.load(fp)
+    #    P_e=temp
+    #plot_policy(P_e,X_max,Y_max,end_location,floor_mask,'Figures/eligibility_traces_policy.png','Eligibility Traces')
     
     #Group 2: Generation of a Policy
     if policy_eval_choice==1:

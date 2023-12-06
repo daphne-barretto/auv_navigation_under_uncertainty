@@ -30,7 +30,7 @@ def main():
     q_save_file='Final_Inputs/Q.pkl'
     sarsa_save_file='Final_Inputs/SARSA.pkl'
     q_nn_save_file='Final_Inputs/Q_NN.pkl'
-    elligibility_save_file='Final_Inputs/SARSA.pkl'
+    elligibility_save_file='Final_Inputs/eligibility_trace_policy2.pkl'
 
     #Log File
     log_file='stastics.csv'
@@ -97,8 +97,8 @@ def main():
     #Elligibility Traces Learning policy
     with open(elligibility_save_file, "rb") as fp:
         temp = pickle.load(fp)
-        P_e=temp[1]
-        run_time_e=temp[2]
+        P_e=temp
+        run_time_e=4*60*60+12*60
     #Baseline Policies
     P_down=baseline_down(floor_mask,end_location)
     P_across=baseline_across(floor_mask,end_location)
